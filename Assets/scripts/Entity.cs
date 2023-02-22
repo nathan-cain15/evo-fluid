@@ -25,7 +25,7 @@ public class Entity : MonoBehaviour
         muscles = new List<Muscle>();
     }
     
-    public void AddBone(Joint joint, int angle, int length)
+    public void AddBone(Joint joint, int angle, float length)
     {
         if (IsBoneOverlapping(joint, angle, length))
         {
@@ -68,7 +68,7 @@ public class Entity : MonoBehaviour
     }
     
     // creates a bone and returns if its overlapping with another collider
-    public bool IsBoneOverlapping(Joint joint, int angle, int length)
+    public bool IsBoneOverlapping(Joint joint, int angle, float length)
     {
         var checkForOverLap = Instantiate(checkForOverlapPrefab);
         checkForOverLap.GetComponent<PolygonCollider2D>().isTrigger = true;
@@ -115,6 +115,7 @@ public class Entity : MonoBehaviour
         lineRenderer.startWidth = 0.15f;
         lineRenderer.endWidth = 0.15f;
         lineRenderer.AddComponent<Rigidbody2D>();
+        lineRenderer.GetComponent<Rigidbody2D>().gravityScale = 0;
         
         lineRenderer.transform.position = (bone.transform.position + otherBone.transform.position) / 2;
         
