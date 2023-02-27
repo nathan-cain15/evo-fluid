@@ -1,11 +1,18 @@
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.UI;
 using UnityEngine;
 
-public class Joint : MonoBehaviour
+public class Food : MonoBehaviour
 {
-    public Entity entity;
-    
+    public float energy;
+    public void OnCollisionEnter2D(Collision2D col)
+    {
+        
+        //Destroy(this);
+    }
+
     // Start is called before the first frame update
     void Start()
     {

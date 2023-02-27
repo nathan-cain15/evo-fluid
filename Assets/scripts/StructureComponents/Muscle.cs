@@ -10,6 +10,10 @@ public class Muscle : MonoBehaviour
     public LineRenderer LineRenderer;
     public float timeScale;
     public float force;
+    public bool forceOverTime = false;
+    public float forceOverTimeTimestep;
+    public int forceOverTimeAmountOfTimes;
+    public float forceOverTimeForce;
     
     // Start is called before the first frame update
     void Start()
@@ -47,6 +51,7 @@ public class Muscle : MonoBehaviour
         firstBone.Rigidbody2D.AddForceAtPosition(firstBoneForce, firstBone.transform.position);
         secondBone.Rigidbody2D.AddForceAtPosition(secondBoneForce, secondBone.transform.position);
     }
+    
 
     // Update is called once per frame
     void Update()

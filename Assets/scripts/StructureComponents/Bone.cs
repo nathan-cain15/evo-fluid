@@ -11,12 +11,13 @@ public class Bone : MonoBehaviour
 {
     public Joint firstJoint;
     public Joint secondJoint;
+    public Entity entity;
     public int firstAngle;
     public float length;
     public Vector3 firstEnd;
     public Vector3 secondEnd;
     public Rigidbody2D Rigidbody2D;
-    public float viscosityDrag = 0.03f;
+    public float viscosityDrag = 0.01f;
     public int num;
     public float surfaceAreaX;
     public float surfaceAreaY;
@@ -39,20 +40,19 @@ public class Bone : MonoBehaviour
 		Vector3 pointVelPosY = Rigidbody2D.GetPointVelocity (ypos_face_center);
 		float velPosY = Vector3.Dot (up, pointVelPosY) * pointVelPosY.sqrMagnitude;   // get the proportion of the velocity vector in the direction of face's normal (0 - 1) times magnitude squared
 		Vector3 fluidDragVecPosY = -up * velPosY * transform.localScale.y * viscosityDrag;  
-		Rigidbody2D.AddForceAtPosition (-fluidDragVecPosY, transform.position);
-		Debug.DrawLine(fluidDragVecPosY, new Vector3(0, 0, 0));
+		Rigidbody2D.AddForceAtPosition (-fluidDragVecPosY * 2, transform.position);
+		//Debug.DrawLine(-fluidDragVecPosY, new Vector3(0, 0, 0));
+		
 		// Vector3 pointVelNegY = Rigidbody2D.GetPointVelocity (yneg_face_center);
 		// float velNegY = Vector3.Dot (up, pointVelNegY) * pointVelNegY.sqrMagnitude;   // get the proportion of the velocity vector in the direction of face's normal (0 - 1) times magnitude squared
 		// Vector3 fluidDragVecNegY = -up * velNegY * transform.localScale.y * viscosityDrag;  
 		// Rigidbody2D.AddForceAtPosition (fluidDragVecNegY, ypos_face_center);
 		
-		Debug.Log(fluidDragVecPosY);
-		Debug.Log(-fluidDragVecPosY);
 		// RIGHT (posX):
 		Vector3 pointVelPosX = Rigidbody2D.GetPointVelocity (xpos_face_center);
 		float velPosX = Vector3.Dot (right, pointVelPosX) * pointVelPosX.sqrMagnitude;   // get the proportion of the velocity vector in the direction of face's normal (0 - 1) times magnitude squared
 		Vector3 fluidDragVecPosX = -right * velPosX * transform.localScale.x * viscosityDrag;  
-		Rigidbody2D.AddForceAtPosition (-fluidDragVecPosX, transform.position);
+		Rigidbody2D.AddForceAtPosition (-fluidDragVecPosX * 2 , transform.position);
 		
 		// Vector3 pointVelNegX = Rigidbody2D.GetPointVelocity (xneg_face_center);
 		// float velNegX = Vector3.Dot (right, pointVelNegX) * pointVelNegX.sqrMagnitude;   // get the proportion of the velocity vector in the direction of face's normal (0 - 1) times magnitude squared

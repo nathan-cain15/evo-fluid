@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Mathematics;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
@@ -17,6 +19,7 @@ public class Entity : MonoBehaviour
     public List<Bone> bones;
     public List<Joint> joints;
     public Joint firstJoint;
+    public float energy = 0f;
 
     public Entity()
     {
@@ -24,7 +27,132 @@ public class Entity : MonoBehaviour
         bones = new List<Bone>();
         muscles = new List<Muscle>();
     }
-    
+
+    public List<Vector2> getDimensions()
+    {
+        float posLeft = transform.position.x;
+        float posRight = transform.position.x;
+        float posTop = transform.position.y;
+        float posBottom = transform.position.y;
+
+        var boneEndVecs = new List<Vector2>();
+
+        foreach (var bone in bones)
+        {
+            Vector2 boneEnd1 = -bone.transform.up * (bone.length / 2) + bone.transform.position;
+            Vector2 boneEnd2 = bone.transform.up * (bone.length / 2) + bone.transform.position;
+            boneEndVecs.Add(boneEnd1);
+            boneEndVecs.Add(boneEnd2);
+        }
+
+        var boneVecs = boneEndVecs.Distinct().ToList();
+
+        foreach (var vec in boneVecs)
+        {
+            if (vec.x > posRight)
+            {
+                posRight = vec.x;
+            }
+            else if (vec.x < posLeft)
+            {
+                posLeft = vec.x;
+            }
+
+            if (vec.y > posTop)
+            {
+                posTop = vec.y;
+            }
+            else if (vec.y < posBottom)
+            {
+                posBottom = vec.y;
+            }
+        }
+
+        List<Vector2> dimensionCoords = new List<Vector2>();
+        dimensionCoords.Add(new Vector2(posLeft, posBottom));
+        dimensionCoords.Add(new Vector2(posRight, posTop));
+        
+        return dimensionCoords;
+    }
+    public Vector2? returnSuitablePlacementPoint()
+    {
+        var dimensions = getDimensions();
+        var vector1 = dimensions[0];
+        var vector2 = dimensions[1];
+        var length = vector2.x - vector1.x;
+        var height = vector2.y - vector1.y;
+
+        var numList = Enumerable.Range(0, 4).ToList();
+        var shuffledList = numList.OrderBy( x => UnityEngine.Random.value ).ToList( );
+       
+        foreach (int num in shuffledList)
+        {
+            //checking left side
+            if (num == 0)
+            {
+                for (int i = 0; i < height; i++)
+                {
+                    var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x - length - 1, vector1.y + i), new Vector2(vector2.x - 1 - length, vector2.y + i));
+            
+                    if (checkingList.Length == 0)
+                    {
+                        return new Vector2(vector1.x - length * 0.5f - 1, vector1.y + i + (height / 2));
+                    }
+                }
+            }
+           
+            //checking top
+            if (num == 1)
+            {
+                for (int i = 0; i < length; i++)
+                {
+                    var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x + i, vector1.y + height + 1),
+                        new Vector2(vector2.x + i, vector2.y + height + 1));
+                    if (checkingList.Length == 0)
+                    {
+                        return new Vector2(vector1.x + i + length * 0.5f, vector1.y + height * 1.5f + 1);
+                    }
+            
+                }
+            }
+           
+            //checking right side
+            if (num == 2)
+            {
+                for (int i = 0; i < height * 2; i++)
+                {
+                    var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x + length + 1, vector1.y - height + i), new Vector2(vector2.x + 1 + length, vector2.y - height + i));
+            
+                    if (checkingList.Length == 0)
+                    {
+                        return new Vector2(vector1.x + length * 1.5f + 1, vector1.y - height + i + (height / 2));
+                    }
+                }
+            }
+
+            //checking bottom
+            if (num == 3)
+            {
+                for (int i = 0; i < length * 2; i++)
+                {
+                    var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x - length + i, vector1.y - height - 1),
+                        new Vector2(vector2.x - length + i, vector2.y - height - 1));
+                    if (checkingList.Length == 0)
+                    {
+                        return new Vector2(vector1.x + i - length * 0.5f, vector1.y - height * 0.5f - 1);
+                    }
+            
+                }
+            }
+        }
+        return null;
+    }
+
+    private void OnGUI()
+    {
+        GUI.Box(new Rect(0, 0, 5, 5), "hello");
+    }
+
     public void AddBone(Joint joint, int angle, float length)
     {
         if (IsBoneOverlapping(joint, angle, length))
@@ -40,6 +168,7 @@ public class Entity : MonoBehaviour
         boneComponent.firstJoint = joint;
         boneComponent.firstAngle = angle;
         boneComponent.length = length;
+        boneComponent.entity = this;
         
         boneObject.transform.parent = this.transform;
         boneObject.transform.localPosition = joint.transform.localPosition;
@@ -94,6 +223,7 @@ public class Entity : MonoBehaviour
         joint.transform.parent = this.transform;
         joint.transform.position = bone.secondEnd;
         joint.AddComponent<Joint>();
+        joint.GetComponent<Joint>().entity = this;
         joint.AddComponent<HingeJoint2D>().connectedBody = bone.GetComponent<Rigidbody2D>();
         
         joints.Add(joint.GetComponent<Joint>());
@@ -133,13 +263,25 @@ public class Entity : MonoBehaviour
         
         muscles.Add(muscleObject.GetComponent<Muscle>());
     }
-
-
+    
     public void UpdateLinePoints(Muscle muscle)
     {
         muscle.LineRenderer.SetPosition(0, muscle.firstBone.transform.position);
         muscle.LineRenderer.SetPosition(1, muscle.secondBone.transform.position);
     }
+
+    public void Mutate()
+    {
+        
+    }
+    
+    // percentStay and percentChange has to add up to 1
+    public void MutateBoneAngle(float percentStay, float percentChange, int angleChangeAmount)
+    {
+        
+    }
+    
+    
     // Start is called before the first frame update
     void Start()
     {
@@ -147,6 +289,7 @@ public class Entity : MonoBehaviour
     }
     void Update()
     {
+        getDimensions();
         foreach (var muscle in muscles)
         {
             UpdateLinePoints(muscle);
