@@ -7,10 +7,18 @@ using UnityEngine;
 public class Food : MonoBehaviour
 {
     public float energy;
-    public void OnCollisionEnter2D(Collision2D col)
+
+    public void OnTriggerEnter2D(Collider2D other)
     {
-        
-        //Destroy(this);
+        if (other.GetComponent<Joint>() != null)
+        {
+            other.GetComponent<Joint>().entity.energy += energy;
+        }
+        else
+        {
+            other.GetComponent<Bone>().entity.energy += energy;
+        }
+        Destroy(gameObject);
     }
 
     // Start is called before the first frame update

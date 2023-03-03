@@ -21,6 +21,7 @@ public class Bone : MonoBehaviour
     public int num;
     public float surfaceAreaX;
     public float surfaceAreaY;
+    public Bone parentBone;
     
     //Start is called before the first frame update
 

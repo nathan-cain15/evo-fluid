@@ -112,23 +112,26 @@ public class GameController : MonoBehaviour
         
         entityScript.addMuscle(entityScript.bones[0], entityScript.bones[1]);
         entityScript.addMuscle(entityScript.bones[1], entityScript.bones[2]);
-        entityScript.muscles[1].timeScale = 1f;
+        entityScript.muscles[1].timeScale = 10000f;
         
-        entityScript.muscles[0].timeScale = 3f;
+        entityScript.muscles[0].timeScale = 10000f;
+        
+        entityScript.Reproduce();
+        
         // entityScript.muscles[0].forceOverTime = true;
         // entityScript.muscles[0].forceOverTimeTimestep = 0.06f;
         // entityScript.muscles[0].forceOverTimeForce = 1000f;
         // entityScript.muscles[0].forceOverTimeAmountOfTimes = 10;
 
-        var results = entityScript.returnSuitablePlacementPoint();
-        
-        if (results != null)
-        {
-            GameObject duplicate = Instantiate(entity);
-            var duplicateScript = duplicate.GetComponent<Entity>();
-            entities.Add(duplicateScript);
-            duplicate.transform.position = new Vector3(results.Value.x, results.Value.y, 0);
-        }
+        // var results = entityScript.returnSuitablePlacementPoint();
+        //
+        // if (results != null)
+        // {
+        //     GameObject duplicate = Instantiate(entity);
+        //     var duplicateScript = duplicate.GetComponent<Entity>();
+        //     entities.Add(duplicateScript);
+        //     duplicate.transform.position = new Vector3(results.Value.x, results.Value.y, 0);
+        // }
         
 
 
@@ -230,7 +233,7 @@ public class GameController : MonoBehaviour
         var topRight = new Vector2(40, 20);
         TestingCreateEntity(point);
         CreateBarrier(bottomLeft, topRight);
-        spawnStartingFood(20, 10, bottomLeft, topRight);
+        //spawnStartingFood(40, 10, bottomLeft, topRight);
 
 
 
