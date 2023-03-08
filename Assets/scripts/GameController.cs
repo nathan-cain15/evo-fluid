@@ -8,6 +8,7 @@ using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UI;
 using Random = Unity.Mathematics.Random;
 
 public class GameController : MonoBehaviour
@@ -19,6 +20,7 @@ public class GameController : MonoBehaviour
     public GameObject barrier;
     public GameObject food;
     public List<Entity> entities;
+    public int entityId = 0;
 
     public GameController()
     {
@@ -58,7 +60,6 @@ public class GameController : MonoBehaviour
         entity.AddComponent<Entity>();
         var entityScript = entity.GetComponent<Entity>();
         entities.Add(entityScript);
-        
         var joint = Instantiate(jointPrefab, position, quaternion.identity);
         
         joint.transform.parent = entity.transform;
@@ -90,9 +91,12 @@ public class GameController : MonoBehaviour
         entity.AddComponent<Entity>();
         var entityScript = entity.GetComponent<Entity>();
         entities.Add(entityScript);
+        entityScript.entityId = entityId;
+        entityId++;
+        
         
         var joint = Instantiate(jointPrefab, position, quaternion.identity);
-        
+        joint.GetComponent<Joint>().jointId = 0;
         joint.transform.parent = entity.transform;
         entityScript.firstJoint = joint.GetComponent<Joint>();
         
@@ -112,12 +116,9 @@ public class GameController : MonoBehaviour
         
         entityScript.addMuscle(entityScript.bones[0], entityScript.bones[1]);
         entityScript.addMuscle(entityScript.bones[1], entityScript.bones[2]);
-        entityScript.muscles[1].timeScale = 10000f;
-        
-        entityScript.muscles[0].timeScale = 10000f;
-        
-        entityScript.Reproduce();
-        
+        entityScript.muscles[1].timeScale = 3f;
+        entityScript.muscles[0].timeScale = 1f;
+
         // entityScript.muscles[0].forceOverTime = true;
         // entityScript.muscles[0].forceOverTimeTimestep = 0.06f;
         // entityScript.muscles[0].forceOverTimeForce = 1000f;
@@ -132,9 +133,26 @@ public class GameController : MonoBehaviour
         //     entities.Add(duplicateScript);
         //     duplicate.transform.position = new Vector3(results.Value.x, results.Value.y, 0);
         // }
-        
 
+    }
 
+    void TestReproduction(float time)
+    {
+        //Debug.Log(entities[0].bones[0].Rigidbody2D.velocity);
+        if (time == 0)
+        {
+            return;
+        }
+
+        if (time % 10f == 0)
+        {
+            var child = entities[0].Reproduce();
+            entities.Add(child);
+            entities[0].muscles[0].timeScale = 1f;
+            entities[0].muscles[1].timeScale = 3f;
+            Destroy(entities[0].gameObject);
+            entities.Remove(entities[0]);
+        }
     }
     
 
@@ -229,8 +247,8 @@ public class GameController : MonoBehaviour
     {
         var point = new Vector3(0, 5, 0);
         var otherPoint = new Vector3(10, 0, 0);
-        var bottomLeft = new Vector2(-40, -20);
-        var topRight = new Vector2(40, 20);
+        var bottomLeft = new Vector2(-100, -100);
+        var topRight = new Vector2(100, 100);
         TestingCreateEntity(point);
         CreateBarrier(bottomLeft, topRight);
         //spawnStartingFood(40, 10, bottomLeft, topRight);
@@ -242,9 +260,20 @@ public class GameController : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
-        ApplyMuscleForces(Time.time);
-        ApplyMuscleForcesOverTime(Time.time);
-        //entities[0].muscles[1].Pull(10);
+        //Debug.DrawLine(entities[0].bones[0].Rigidbody2D.velocity, new Vector3(0, 0, 0));
+        //Debug.Log(Time.time);
+        TestReproduction(Time.time);
+        foreach (var entity in entities)
+        {
+            foreach (var bone in entity.bones)
+            {
+                bone.CalculateViscosityVelocity();
+            }
+        }
+
+        //ApplyMuscleForces(Time.time);
+        //ApplyMuscleForcesOverTime(Time.time);
+        
     }
 }
  

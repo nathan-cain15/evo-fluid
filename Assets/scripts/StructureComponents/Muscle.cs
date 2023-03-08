@@ -14,6 +14,7 @@ public class Muscle : MonoBehaviour
     public float forceOverTimeTimestep;
     public int forceOverTimeAmountOfTimes;
     public float forceOverTimeForce;
+    public int muscleId;
     
     // Start is called before the first frame update
     void Start()
