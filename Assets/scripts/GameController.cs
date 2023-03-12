@@ -26,63 +26,6 @@ public class GameController : MonoBehaviour
     {
         entities = new List<Entity>();
     }
-    
-    private void CreateEntity(Vector3 position)
-    {
-        var entity = new GameObject("entity");
-        entity.transform.Translate(position);
-        entity.AddComponent<Entity>();
-        var entityScript = entity.GetComponent<Entity>();
-        entities.Add(entityScript);
-        
-        var joint = Instantiate(jointPrefab, position, quaternion.identity);
-        
-        joint.transform.parent = entity.transform;
-        entityScript.firstJoint = joint.GetComponent<Joint>();
-        
-        entityScript.joints.Add(joint.GetComponent<Joint>());
-        entityScript.bonePrefab = bonePrefab;
-        entityScript.jointPrefab = jointPrefab;
-        entityScript.checkForOverlapPrefab = checkForOverlapPrefab;
-        entityScript.AddBone(entityScript.firstJoint, 100, 5);
-        entityScript.AddBone(entityScript.firstJoint, 180, 5);
-        entityScript.bones[0].num = 0;
-        entityScript.bones[1].num = 1;
-        
-        entityScript.addMuscle(entityScript.bones[0], entityScript.bones[1]);
-        entityScript.muscles[0].timeScale = 10f;
-
-    }
-    private void thirdEntity(Vector3 position)
-    {
-        var entity = new GameObject("entity");
-        entity.transform.Translate(position);
-        entity.AddComponent<Entity>();
-        var entityScript = entity.GetComponent<Entity>();
-        entities.Add(entityScript);
-        var joint = Instantiate(jointPrefab, position, quaternion.identity);
-        
-        joint.transform.parent = entity.transform;
-        entityScript.firstJoint = joint.GetComponent<Joint>();
-        
-        entityScript.joints.Add(joint.GetComponent<Joint>());
-        entityScript.bonePrefab = bonePrefab;
-        entityScript.jointPrefab = jointPrefab;
-        entityScript.checkForOverlapPrefab = checkForOverlapPrefab;
-        entityScript.AddBone(entityScript.firstJoint, 30, 5);
-        entityScript.AddBone(entityScript.firstJoint, 180, 10);
-        entityScript.AddBone(entityScript.firstJoint, 330, 5);
-        entityScript.bones[0].num = 0;
-        entityScript.bones[1].num = 1;
-        //entityScript.AddJoint(entityScript.bones[0]);
-        entityScript.addMuscle(entityScript.bones[0], entityScript.bones[1]);
-        //entityScript.addMuscle(entityScript.bones[1], entityScript.bones[2]);
-
-        //entityScript.AddBone(entityScript.joints[1], 180, 8);
-        entityScript.addMuscle(entityScript.bones[1], entityScript.bones[2]);
-        
-        //entityScript.muscles[0].Push(10);
-    }
 
     private void TestingCreateEntity(Vector3 position)
     {
@@ -104,9 +47,9 @@ public class GameController : MonoBehaviour
         entityScript.bonePrefab = bonePrefab;
         entityScript.jointPrefab = jointPrefab;
         entityScript.checkForOverlapPrefab = checkForOverlapPrefab;
-        entityScript.AddBone(entityScript.firstJoint, 30, 5);
+        entityScript.AddBone(entityScript.firstJoint, 90, 5);
         entityScript.AddBone(entityScript.firstJoint, 180, 5);
-        entityScript.AddBone(entityScript.firstJoint, 330, 5);
+        entityScript.AddBone(entityScript.firstJoint, 270, 5);
         entityScript.bones[0].num = 0;
         entityScript.bones[1].num = 1;
         
@@ -116,8 +59,8 @@ public class GameController : MonoBehaviour
         
         entityScript.addMuscle(entityScript.bones[0], entityScript.bones[1]);
         entityScript.addMuscle(entityScript.bones[1], entityScript.bones[2]);
-        entityScript.muscles[1].timeScale = 3f;
-        entityScript.muscles[0].timeScale = 1f;
+        entityScript.muscles[1].timeScale = 2f;
+        entityScript.muscles[0].timeScale = 2f;
 
         // entityScript.muscles[0].forceOverTime = true;
         // entityScript.muscles[0].forceOverTimeTimestep = 0.06f;
@@ -144,14 +87,14 @@ public class GameController : MonoBehaviour
             return;
         }
 
-        if (time % 10f == 0)
+        if (time % 2f == 0)
         {
             var child = entities[0].Reproduce();
+            child.entityId = entityId;
+            entityId++;
             entities.Add(child);
-            entities[0].muscles[0].timeScale = 1f;
-            entities[0].muscles[1].timeScale = 3f;
-            Destroy(entities[0].gameObject);
-            entities.Remove(entities[0]);
+            //Destroy(entities[0].gameObject);
+            //entities.Remove(entities[0]);
         }
     }
     
@@ -197,6 +140,36 @@ public class GameController : MonoBehaviour
                 }
             }
         }
+    }
+
+    void SpawnStartingEntities(int numOfEntities)
+    {
+        
+    }
+
+    void StarterEntity(Vector2 position)
+    {
+        var entity = new GameObject("entity");
+        entity.transform.Translate(position);
+        entity.AddComponent<Entity>();
+        var entityScript = entity.GetComponent<Entity>();
+        entities.Add(entityScript);
+        entityScript.entityId = entityId;
+        entityId++;
+        
+        var joint = Instantiate(jointPrefab, position, quaternion.identity);
+        joint.GetComponent<Joint>().jointId = 0;
+        joint.transform.parent = entity.transform;
+        entityScript.firstJoint = joint.GetComponent<Joint>();
+        entityScript.joints.Add(joint.GetComponent<Joint>());
+        entityScript.bonePrefab = bonePrefab;
+        entityScript.jointPrefab = jointPrefab;
+        entityScript.checkForOverlapPrefab = checkForOverlapPrefab;
+        entityScript.AddBone(entityScript.firstJoint, 30, 5);
+        entityScript.AddBone(entityScript.firstJoint, 180, 5);
+        entityScript.AddJoint(entityScript.bones[0]);
+        entityScript.AddJoint(entityScript.bones[1]);
+        entityScript.addMuscle(entityScript.bones[0], entityScript.bones[1]);
     }
 
     void spawnFood(float time, int foodRate, Vector2 vec1, Vector2 vec2)
@@ -260,18 +233,11 @@ public class GameController : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
+        
         //Debug.DrawLine(entities[0].bones[0].Rigidbody2D.velocity, new Vector3(0, 0, 0));
         //Debug.Log(Time.time);
+        ApplyMuscleForces(Time.time);
         TestReproduction(Time.time);
-        foreach (var entity in entities)
-        {
-            foreach (var bone in entity.bones)
-            {
-                bone.CalculateViscosityVelocity();
-            }
-        }
-
-        //ApplyMuscleForces(Time.time);
         //ApplyMuscleForcesOverTime(Time.time);
         
     }

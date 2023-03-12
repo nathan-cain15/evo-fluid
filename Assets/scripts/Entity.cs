@@ -24,6 +24,7 @@ public class Entity : MonoBehaviour
     public Joint firstJoint;
     public float energy = 0f;
     public Entity parent;
+    public bool firstIteration = true;
     
     public int entityId;
     public int boneId = 0;
@@ -81,8 +82,6 @@ public class Entity : MonoBehaviour
         List<Vector2> dimensionCoords = new List<Vector2>();
         dimensionCoords.Add(new Vector2(posLeft, posBottom));
         dimensionCoords.Add(new Vector2(posRight, posTop));
-        //Debug.Log(dimensionCoords[0]);
-        //Debug.Log(dimensionCoords[1]);
         return dimensionCoords;
     }
     public Vector2? returnSuitablePlacementPoint()
@@ -196,7 +195,7 @@ public class Entity : MonoBehaviour
         boneObject.AddComponent<Rigidbody2D>();
         boneObject.GetComponent<Rigidbody2D>().gravityScale = 0;
         boneObject.GetComponent<Rigidbody2D>().drag = 0.5f;
-        boneObject.GetComponent<Rigidbody2D>().angularDrag = 0.05f;
+        boneObject.GetComponent<Rigidbody2D>().angularDrag = 0.5f;
         boneObject.GetComponent<Rigidbody2D>().mass = length;
         boneComponent.Rigidbody2D = boneObject.GetComponent<Rigidbody2D>();
         
@@ -293,7 +292,9 @@ public class Entity : MonoBehaviour
     [CanBeNull]
     public Entity Reproduce()
     {
+        Physics2D.SyncTransforms();
         var pos = returnSuitablePlacementPoint();
+        Debug.Log(pos);
         if (pos.HasValue)
         {
             var child = new GameObject("entity");
@@ -321,7 +322,7 @@ public class Entity : MonoBehaviour
             var newJoint = Instantiate(jointPrefab);
             var newJointComponent = newJoint.GetComponent<Joint>();
             newJoint.transform.parent = this.transform;
-            newJoint.transform.localPosition = joint.transform.localPosition;
+            newJoint.transform.position = this.transform.position + joint.transform.position - parent.joints[0].transform.position;
             newJointComponent.parentJoint = joint;
             newJointComponent.entity = this;
             newJointComponent.jointId = jointId;
@@ -366,7 +367,7 @@ public class Entity : MonoBehaviour
         }
 
     }
-    
+
     // connect the bones of the mutated joints
     public void ConnectBones()
     {
@@ -388,8 +389,8 @@ public class Entity : MonoBehaviour
             newBone.AddComponent<Rigidbody2D>();
             newBoneComponent.Rigidbody2D = newBone.GetComponent<Rigidbody2D>();
             newBoneComponent.Rigidbody2D.gravityScale = 0;
-            newBoneComponent.Rigidbody2D.drag = 0.5f;
-            newBoneComponent.Rigidbody2D.angularDrag = 0.1f;
+            newBoneComponent.Rigidbody2D.drag = 0.05f;
+            newBoneComponent.Rigidbody2D.angularDrag = 0.5f;
             
             // find the corresponding joints based on the shared parent positions
             newBoneComponent.firstJoint = joints.Find(x => x.jointId == bone.firstJoint.jointId);
@@ -437,9 +438,9 @@ public class Entity : MonoBehaviour
             lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
             lineRenderer.startWidth = 0.15f;
             lineRenderer.endWidth = 0.15f;
-            lineRenderer.AddComponent<Rigidbody2D>();
-            lineRenderer.GetComponent<Rigidbody2D>().drag = 0.5f;
-            lineRenderer.GetComponent<Rigidbody2D>().gravityScale = 0;
+            // lineRenderer.AddComponent<Rigidbody2D>();
+            // lineRenderer.GetComponent<Rigidbody2D>().drag = 0.5f;
+            // lineRenderer.GetComponent<Rigidbody2D>().gravityScale = 0;
            
             lineRenderer.transform.position = (bone.transform.position + otherBone.transform.position) / 2;
             
@@ -520,5 +521,12 @@ public class Entity : MonoBehaviour
         {
             UpdateLinePoints(muscle);
         }
+
+        // if (entityId == 1)
+        // {
+        //     Time.timeScale = 0;
+        // }
+
+       
     }
 }
