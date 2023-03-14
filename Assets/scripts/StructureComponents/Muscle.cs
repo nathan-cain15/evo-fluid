@@ -5,16 +5,18 @@ using UnityEngine;
 
 public class Muscle : MonoBehaviour
 {
+    public Entity entity;
     public Bone firstBone;
     public Bone secondBone;
     public LineRenderer LineRenderer;
     public float timeScale;
-    public float force;
+    public int force;
     public bool forceOverTime = false;
     public float forceOverTimeTimestep;
     public int forceOverTimeAmountOfTimes;
     public float forceOverTimeForce;
     public int muscleId;
+    public int energy = 100000;
     
     // Start is called before the first frame update
     void Start()
@@ -51,6 +53,8 @@ public class Muscle : MonoBehaviour
         
         firstBone.Rigidbody2D.AddForceAtPosition(firstBoneForce, firstBone.transform.position);
         secondBone.Rigidbody2D.AddForceAtPosition(secondBoneForce, secondBone.transform.position);
+
+        entity.energyReserve -= force;
     }
     
 

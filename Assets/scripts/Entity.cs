@@ -22,14 +22,17 @@ public class Entity : MonoBehaviour
     public List<Bone> bones;
     public List<Joint> joints;
     public Joint firstJoint;
-    public float energy = 0f;
+    public int energyReserve = 100000;
+    public int energyReserveGivenToChildren = 100000;
+    public int energyToReproduce = 0;
     public Entity parent;
-    public bool firstIteration = true;
-    
+    public bool isWaitingToReproduce = false;
     public int entityId;
     public int boneId = 0;
     public int jointId = 0;
     public int muscleId = 0;
+    public int CostToCreate;
+    
 
 
     public Entity()
@@ -103,7 +106,7 @@ public class Entity : MonoBehaviour
             {
                 for (int i = 0; i < height; i++)
                 {
-                    var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x - length - 1, vector1.y + i), new Vector2(vector2.x - 1 - length, vector2.y + i));
+                    var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x - length - 1, vector1.y + i), new Vector2(vector2.x - 1 - length, vector2.y + i), 0);
             
                     if (checkingList.Length == 0)
                     {
@@ -118,7 +121,7 @@ public class Entity : MonoBehaviour
                 for (int i = 0; i < length; i++)
                 {
                     var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x + i, vector1.y + height + 1),
-                        new Vector2(vector2.x + i, vector2.y + height + 1));
+                        new Vector2(vector2.x + i, vector2.y + height + 1), 0);
                     if (checkingList.Length == 0)
                     {
                         return new Vector2(vector1.x + i + length * 0.5f, vector1.y + height * 1.5f + 1);
@@ -132,7 +135,7 @@ public class Entity : MonoBehaviour
             {
                 for (int i = 0; i < height * 2; i++)
                 {
-                    var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x + length + 1, vector1.y - height + i), new Vector2(vector2.x + 1 + length, vector2.y - height + i));
+                    var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x + length + 1, vector1.y - height + i), new Vector2(vector2.x + 1 + length, vector2.y - height + i), 0);
             
                     if (checkingList.Length == 0)
                     {
@@ -147,7 +150,7 @@ public class Entity : MonoBehaviour
                 for (int i = 0; i < length * 2; i++)
                 {
                     var checkingList = Physics2D.OverlapAreaAll(new Vector2(vector1.x - length + i, vector1.y - height - 1),
-                        new Vector2(vector2.x - length + i, vector2.y - height - 1));
+                        new Vector2(vector2.x - length + i, vector2.y - height - 1), 0);
                     if (checkingList.Length == 0)
                     {
                         return new Vector2(vector1.x + i - length * 0.5f, vector1.y - height * 0.5f - 1);
@@ -252,7 +255,8 @@ public class Entity : MonoBehaviour
         var muscleComponent = muscleObject.GetComponent<Muscle>();
         var lineRenderer = muscleObject.GetComponent<LineRenderer>();
 
-        muscleObject.GetComponent<Muscle>().LineRenderer = muscleObject.GetComponent<LineRenderer>();
+        muscleComponent.LineRenderer = muscleObject.GetComponent<LineRenderer>();
+        muscleComponent.entity = this;
 
         lineRenderer.SetPosition(0, bone.transform.position);
         lineRenderer.SetPosition(1, otherBone.transform.position);
@@ -288,13 +292,12 @@ public class Entity : MonoBehaviour
         muscle.LineRenderer.SetPosition(0, muscle.firstBone.transform.position);
         muscle.LineRenderer.SetPosition(1, muscle.secondBone.transform.position);
     }
-
+    
     [CanBeNull]
     public Entity Reproduce()
     {
         Physics2D.SyncTransforms();
         var pos = returnSuitablePlacementPoint();
-        Debug.Log(pos);
         if (pos.HasValue)
         {
             var child = new GameObject("entity");
@@ -304,9 +307,13 @@ public class Entity : MonoBehaviour
             child.transform.position = pos.Value;
             childEntityScript.bonePrefab = bonePrefab;
             childEntityScript.jointPrefab = jointPrefab;
-            childEntityScript.CreateAndMutateJoints(0.75f, 1f);
+            childEntityScript.CreateAndMutateJoints(0.75f, 0.5f);
             childEntityScript.ConnectBones();
             childEntityScript.ConnectMuscles();
+            childEntityScript.MutateMuscleForce(0.75f, 1);
+            childEntityScript.CostToCreate = childEntityScript.CalculateCost();
+            childEntityScript.energyReserve = energyReserveGivenToChildren;
+            
             return childEntityScript;
         }
 
@@ -383,6 +390,7 @@ public class Entity : MonoBehaviour
             var jointPos2 = bone.secondJoint.transform.localPosition;
             newBone.transform.parent = this.transform;
             newBoneComponent.boneId = boneId;
+            newBoneComponent.entity = this;
             boneId++;
             
             //set up rigidbody
@@ -397,10 +405,13 @@ public class Entity : MonoBehaviour
             newBoneComponent.secondJoint = joints.Find(x => x.jointId == bone.secondJoint.jointId);
 
             newBone.transform.position = new Vector2((newBoneComponent.firstJoint.transform.position.x + newBoneComponent.secondJoint.transform.position.x) / 2, (newBoneComponent.firstJoint.transform.position.y + newBoneComponent.secondJoint.transform.position.y) / 2);
-
+            
             //set the length of the bone
-            newBone.transform.localScale = new Vector2(newBone.transform.localScale.x,
-                2 * Vector2.Distance(newBoneComponent.transform.position, newBoneComponent.firstJoint.transform.position));
+            var length = 2 * Vector2.Distance(newBoneComponent.transform.position,
+                newBoneComponent.firstJoint.transform.position);
+            newBone.transform.localScale = new Vector2(newBone.transform.localScale.x, length);
+            newBoneComponent.length = length;
+            
             newBoneComponent.length = newBone.transform.localScale.y;
             newBoneComponent.Rigidbody2D.mass = newBoneComponent.length;
             
@@ -423,6 +434,7 @@ public class Entity : MonoBehaviour
             var muscleComponent = muscleObject.GetComponent<Muscle>();
             var lineRenderer = muscleObject.GetComponent<LineRenderer>();
             muscleComponent.LineRenderer = muscleObject.GetComponent<LineRenderer>();
+            muscleComponent.entity = this;
             muscleComponent.muscleId = muscleId;
             muscleId++;
 
@@ -455,7 +467,7 @@ public class Entity : MonoBehaviour
             boneSpringJoint.enableCollision = true;
             boneSpringJoint.frequency = 0.75f;
             boneSpringJoint.dampingRatio = 0.6f;
-            muscleComponent.force = 10000f;
+            muscleComponent.force = 10000;
             muscleComponent.timeScale = 3f;
             //Debug.Log(boneSpringJoint.distance);
             muscles.Add(muscleObject.GetComponent<Muscle>());
@@ -507,7 +519,39 @@ public class Entity : MonoBehaviour
         }
         
     }
-    
+
+    public bool CheckIfDead()
+    {
+        if (energyReserve < muscles[0].force)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    public bool CheckIfCanReproduce()
+    {
+        if (CostToCreate <= energyToReproduce)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    public int CalculateCost()
+    {
+        int childEnergyCost = 0;
+        foreach (var bone in bones)
+        {
+            childEnergyCost += bone.energy * (int)bone.length;
+        }
+
+        childEnergyCost += muscles.Count * muscles[0].energy;
+        childEnergyCost += joints.Count * joints[0].energy;
+        return childEnergyCost;
+    }
     
     // Start is called before the first frame update
     void Start()
@@ -516,11 +560,12 @@ public class Entity : MonoBehaviour
     }
     void Update()
     {
-        getDimensions();
+        CheckIfDead();
         foreach (var muscle in muscles)
         {
             UpdateLinePoints(muscle);
         }
+       
 
         // if (entityId == 1)
         // {

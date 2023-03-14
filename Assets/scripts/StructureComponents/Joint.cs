@@ -7,6 +7,7 @@ public class Joint : MonoBehaviour
     public Entity entity;
     public Joint parentJoint;
     public int jointId;
+    public int energy = 100000;
     
     // Start is called before the first frame update
     void Start()

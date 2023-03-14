@@ -23,6 +23,7 @@ public class Bone : MonoBehaviour
     public float surfaceAreaY;
     public Bone parentBone;
     public int boneId;
+    public int energy = 50000;
     
     //Start is called before the first frame update
 
@@ -133,14 +134,11 @@ public class Bone : MonoBehaviour
     {
 	    Vector3 velocity = Rigidbody2D.velocity;
 	    float magnitudeInPerp = Vector3.Dot(transform.right, velocity.normalized) * velocity.sqrMagnitude;
-	    Vector3 velInPerp = transform.right * magnitudeInPerp * transform.localScale.y;
-	    Rigidbody2D.AddForceAtPosition(-velInPerp, transform.position);
+	    Vector3 velInPerp = transform.right * transform.localScale.y * magnitudeInPerp;
+	    Rigidbody2D.AddForceAtPosition(-velInPerp,  transform.position);
 
-	    if (boneId == 0)
-	    {
-		    //Debug.DrawLine(velInPerp + transform.position, transform.position);
-		    //Debug.DrawLine(velocity + transform.position, transform.position);
-	    }
+	   // Debug.DrawLine(velocity + transform.position, transform.position);
+	   // Debug.Log(velocity.magnitude);
     }
     
     
