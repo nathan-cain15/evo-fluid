@@ -32,6 +32,9 @@ public class Entity : MonoBehaviour
     public int jointId = 0;
     public int muscleId = 0;
     public int CostToCreate;
+
+    public Vector2 bottomLeftDebug;
+    public Vector2 topRightDebug;
     
 
 
@@ -93,6 +96,8 @@ public class Entity : MonoBehaviour
         var dimensions = getDimensions();
         var vector1 = dimensions[0];
         var vector2 = dimensions[1];
+        bottomLeftDebug = vector1;
+        topRightDebug = vector2;
         var length = vector2.x - vector1.x;
         var height = vector2.y - vector1.y;
 
@@ -160,6 +165,14 @@ public class Entity : MonoBehaviour
             }
         }
         return null;
+    }
+
+    public void DrawRect(Vector2 bottomLeft, Vector2 topRight)
+    {
+        Debug.DrawLine(bottomLeft, new Vector3(topRight.x, bottomLeft.y));
+        Debug.DrawLine(bottomLeft, new Vector3(bottomLeft.x, topRight.y));
+        Debug.DrawLine(topRight, new Vector3(bottomLeft.x, topRight.y));
+        Debug.DrawLine(topRight, new Vector3(topRight.x, bottomLeft.y));
     }
     
     
@@ -298,8 +311,10 @@ public class Entity : MonoBehaviour
     {
         Physics2D.SyncTransforms();
         var pos = returnSuitablePlacementPoint();
+        
         if (pos.HasValue)
         {
+            Debug.DrawLine(pos.Value, transform.position);
             var child = new GameObject("entity");
             child.AddComponent<Entity>();
             var childEntityScript = child.GetComponent<Entity>();
@@ -307,10 +322,11 @@ public class Entity : MonoBehaviour
             child.transform.position = pos.Value;
             childEntityScript.bonePrefab = bonePrefab;
             childEntityScript.jointPrefab = jointPrefab;
-            childEntityScript.CreateAndMutateJoints(0.75f, 0.5f);
+            childEntityScript.CreateAndMutateJoints(0.75f, 0.25f);
             childEntityScript.ConnectBones();
             childEntityScript.ConnectMuscles();
-            childEntityScript.MutateMuscleForce(0.75f, 1);
+            childEntityScript.MutateMuscleForce(0.75f, 5);
+            childEntityScript.MutateMuscleTimeScale(0.75f, 0.02f);
             childEntityScript.CostToCreate = childEntityScript.CalculateCost();
             childEntityScript.energyReserve = energyReserveGivenToChildren;
             
@@ -335,40 +351,17 @@ public class Entity : MonoBehaviour
             newJointComponent.jointId = jointId;
             jointId++;
             
-            var xChangeRandomPercent = UnityEngine.Random.Range(0f, 1f);
-            var yChangeRandomPercent = UnityEngine.Random.Range(0f, 1f);
-            var xChange = 0f;
-            var yChange = 0f;
+            var willChangePercentage = UnityEngine.Random.Range(0f, 1f);
 
-            if (xChangeRandomPercent > percentStay)
+            Vector2 transformChange = new Vector2(0, 0);
+
+            if (willChangePercentage > percentStay)
             {
-                var posOrNegInt = UnityEngine.Random.Range(0, 1);
-                if (posOrNegInt == 1)
-                {
-                    xChange = amount;
-                }
-                else
-                {
-                    xChange = -amount;
-                }
-                
+                transformChange = UnityEngine.Random.insideUnitCircle * amount;
             }
-
-            if (yChangeRandomPercent > percentStay)
-            {
-                var posOrNegInt = UnityEngine.Random.Range(0, 1);
-                if (posOrNegInt == 1)
-                {
-                    yChange = amount;
-                }
-                else
-                {
-                    yChange = -amount;
-                }
-            }
-
+            
             newJoint.transform.position =
-                new Vector2(newJoint.transform.position.x + xChange, newJoint.transform.position.y + yChange);
+                new Vector2(newJoint.transform.position.x + transformChange.x, newJoint.transform.position.y + transformChange.y);
             
             joints.Add(newJointComponent);
         }
@@ -469,7 +462,6 @@ public class Entity : MonoBehaviour
             boneSpringJoint.dampingRatio = 0.6f;
             muscleComponent.force = 10000;
             muscleComponent.timeScale = 3f;
-            //Debug.Log(boneSpringJoint.distance);
             muscles.Add(muscleObject.GetComponent<Muscle>());
             
         }
@@ -483,7 +475,7 @@ public class Entity : MonoBehaviour
 
             if (percent > percentStay)
             {
-                var posOrNegInt = UnityEngine.Random.Range(0, 1);
+                var posOrNegInt = UnityEngine.Random.Range(0, 2);
 
                 if (posOrNegInt == 1)
                 {
@@ -505,7 +497,7 @@ public class Entity : MonoBehaviour
 
             if (percent > percentStay)
             {
-                var posOrNegInt = UnityEngine.Random.Range(0, 1);
+                var posOrNegInt = UnityEngine.Random.Range(0, 2);
 
                 if (posOrNegInt == 1)
                 {
@@ -545,7 +537,7 @@ public class Entity : MonoBehaviour
         int childEnergyCost = 0;
         foreach (var bone in bones)
         {
-            childEnergyCost += bone.energy * (int)bone.length;
+            childEnergyCost += (int)(bone.energy * bone.length);
         }
 
         childEnergyCost += muscles.Count * muscles[0].energy;
@@ -566,6 +558,7 @@ public class Entity : MonoBehaviour
             UpdateLinePoints(muscle);
         }
        
+        DrawRect(bottomLeftDebug, topRightDebug);
 
         // if (entityId == 1)
         // {

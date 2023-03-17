@@ -116,8 +116,9 @@ public class GameController : MonoBehaviour
         {
             foreach (var muscle in entity.muscles)
             {
-                if (!muscle.forceOverTime && time % muscle.timeScale == 0)
+                if (!muscle.forceOverTime && Decimal.Round((decimal)time, 2) % Decimal.Round((decimal)muscle.timeScale) == 0)
                 {
+                    
                     muscle.Pull(muscle.force);
                 }
             }
@@ -263,9 +264,7 @@ public class GameController : MonoBehaviour
                 if (child != null)
                 {
                     entities.Add(child);
-                    Debug.Log(entities[i].energyToReproduce);
                     entities[i].energyToReproduce -= entities[i].CostToCreate;
-                    Debug.Log(entities[i].energyToReproduce);
 
                 }
                 else
@@ -298,14 +297,14 @@ public class GameController : MonoBehaviour
     {
         var point = new Vector3(0, 5, 0);
         var otherPoint = new Vector3(10, 0, 0);
-        var varBottomLeft = new Vector2(-100, -100);
-        var varTopRight = new Vector2(100, 100);
+        var varBottomLeft = new Vector2(-200, -200);
+        var varTopRight = new Vector2(200, 200);
         this.bottomLeft = varBottomLeft;
         this.topRight = varTopRight;
         StarterEntity(point);
         CreateBarrier(bottomLeft, topRight);
         SpawnStartingEntities(5);
-        spawnStartingFood(1000);
+        spawnStartingFood(5000);
     }
     
     // Update is called once per frame
@@ -320,10 +319,29 @@ public class GameController : MonoBehaviour
             }
         }
         ApplyMuscleForces(Time.time);
+       // Debug.Log(Time.time);
         CheckEntitiesToReproduce();
         CheckIfAnyEntityIsWaitingToReproduce();
         //TestReproduction(Time.time);
-        spawnFood(Time.time, 1, 10);
+        spawnFood(Time.time, 1, 30);
+        
+        // debug
+        foreach (var entity in entities)
+        {
+            foreach (var muscle in entity.muscles)
+            {
+                if (muscle.timeScale == 2.98f)
+                {
+                    //Debug.DrawLine(new Vector3(0, 0,0), muscle.transform.position);
+                }
+            }
+        }
+
+        // if (Decimal.Round((decimal)Time.time, 2) % Decimal.Round(2.981111M, 2) == 0)
+        // {
+        //     Debug.Log(Decimal.Round(2.98111M));
+        //     Debug.Log(Time.time);
+        // }
 
     }
 }

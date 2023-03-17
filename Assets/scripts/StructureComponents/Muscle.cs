@@ -42,6 +42,8 @@ public class Muscle : MonoBehaviour
 
     public void Pull(float scaleForce)
     {
+
+        
         var centerPosition = (firstBone.transform.position + secondBone.transform.position) / 2;
 
         var firstBoneForce = (centerPosition - firstBone.transform.position).normalized;
@@ -50,7 +52,7 @@ public class Muscle : MonoBehaviour
         Vector3 scale = new Vector3(scaleForce, scaleForce, scaleForce);
         firstBoneForce.Scale(scale);
         secondBoneForce.Scale(scale);
-        
+
         firstBone.Rigidbody2D.AddForceAtPosition(firstBoneForce, firstBone.transform.position);
         secondBone.Rigidbody2D.AddForceAtPosition(secondBoneForce, secondBone.transform.position);
 
