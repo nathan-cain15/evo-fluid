@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using JetBrains.Annotations;
 using Unity.Mathematics;
@@ -10,6 +12,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
+using Image = UnityEngine.UI.Image;
 using Random = System.Random;
 
 public class Entity : MonoBehaviour
@@ -32,6 +35,7 @@ public class Entity : MonoBehaviour
     public int jointId = 0;
     public int muscleId = 0;
     public int CostToCreate;
+    public int reproductionAngle;
 
     public Vector2 bottomLeftDebug;
     public Vector2 topRightDebug;
@@ -47,10 +51,10 @@ public class Entity : MonoBehaviour
 
     public List<Vector2> getDimensions()
     {
-        float posLeft = transform.position.x;
-        float posRight = transform.position.x;
-        float posTop = transform.position.y;
-        float posBottom = transform.position.y;
+        float posLeft = bones[0].transform.position.x;
+        float posRight = bones[0].transform.position.x;
+        float posTop = bones[0].transform.position.y;
+        float posBottom = bones[0].transform.position.y;
 
         var boneEndVecs = new List<Vector2>();
 
@@ -100,6 +104,16 @@ public class Entity : MonoBehaviour
         topRightDebug = vector2;
         var length = vector2.x - vector1.x;
         var height = vector2.y - vector1.y;
+        
+        var angleList = new List<int>{0, 90, 180, 270};
+        var randomAngle = angleList[UnityEngine.Random.Range(0, 4)];
+        reproductionAngle = randomAngle;
+        if (randomAngle == 90 | randomAngle == 180)
+        {
+            Vector2 center = new Vector2(vector1[0] + (length / 2), vector1[1] + (height / 2));
+            vector1 = new Vector2(center.x - (height / 2), center.y - (length / 2));
+            vector2 = new Vector2(center.x + (height / 2), center.y + (length / 2));
+        }
 
         var numList = Enumerable.Range(0, 4).ToList();
         var shuffledList = numList.OrderBy( x => UnityEngine.Random.value ).ToList( );
@@ -314,7 +328,6 @@ public class Entity : MonoBehaviour
         
         if (pos.HasValue)
         {
-            Debug.DrawLine(pos.Value, transform.position);
             var child = new GameObject("entity");
             child.AddComponent<Entity>();
             var childEntityScript = child.GetComponent<Entity>();
@@ -322,11 +335,13 @@ public class Entity : MonoBehaviour
             child.transform.position = pos.Value;
             childEntityScript.bonePrefab = bonePrefab;
             childEntityScript.jointPrefab = jointPrefab;
-            childEntityScript.CreateAndMutateJoints(0.75f, 0.25f);
+            childEntityScript.CreateAndMutateJoints(0.9f, 0.25f);
+            childEntityScript.transform.Rotate(new Vector3(0, 0, reproductionAngle));
             childEntityScript.ConnectBones();
+            childEntityScript.CreateNewBoneMutations(0.90f, 3);
             childEntityScript.ConnectMuscles();
-            childEntityScript.MutateMuscleForce(0.75f, 5);
-            childEntityScript.MutateMuscleTimeScale(0.75f, 0.02f);
+            childEntityScript.MutateMuscleForce(0.9f, 50);
+            childEntityScript.MutateMuscleTimeScale(0.9f, 0.06f);
             childEntityScript.CostToCreate = childEntityScript.CalculateCost();
             childEntityScript.energyReserve = energyReserveGivenToChildren;
             
@@ -367,6 +382,7 @@ public class Entity : MonoBehaviour
         }
 
     }
+    
 
     // connect the bones of the mutated joints
     public void ConnectBones()
@@ -411,8 +427,132 @@ public class Entity : MonoBehaviour
             //calculate the angle needed to set the bone into place with the joints
             var angle = Vector2.SignedAngle(new Vector2(newBoneComponent.secondJoint.transform.position.x - newBone.transform.position.x, newBoneComponent.secondJoint.transform.position.y - newBone.transform.position.y), new Vector2(1, 0));
             newBone.transform.eulerAngles = new Vector3(0, 0, 90 - angle);
-            newBoneComponent.firstJoint.AddComponent<HingeJoint2D>().connectedBody = newBoneComponent.GetComponent<Rigidbody2D>();
             newBoneComponent.secondJoint.AddComponent<HingeJoint2D>().connectedBody = newBoneComponent.GetComponent<Rigidbody2D>();
+            newBoneComponent.firstJoint.AddComponent<HingeJoint2D>().connectedBody = newBoneComponent.GetComponent<Rigidbody2D>();
+        }
+    }
+    
+    public void CreateNewBoneMutations(float percentstay, float length)
+    {
+        for (int i = 0; i < joints.Count; i++)
+        {
+            var willChangePercentage = UnityEngine.Random.Range(0f, 1f);
+
+            if (willChangePercentage > percentstay)
+            {
+                var newBone = Instantiate(bonePrefab);
+                
+                newBone.AddComponent<Bone>();
+                var newBoneComponent = newBone.GetComponent<Bone>();
+                bones.Add(newBoneComponent);
+                newBone.transform.parent = this.transform;
+                newBoneComponent.entity = this;
+                newBoneComponent.boneId = boneId;
+                boneId++;
+
+                var jointPosition = joints[i].transform.position;
+
+                newBoneComponent.transform.localScale = new Vector3(0.25f, length, 0);
+                var randAngle = UnityEngine.Random.Range(1, 361);
+                Debug.Log(randAngle);
+                newBoneComponent.transform.Rotate(new Vector3(0, 0, randAngle));
+
+                newBoneComponent.transform.position = new Vector3(jointPosition.x + newBoneComponent.transform.up.x * length * 0.5f, jointPosition.y + newBoneComponent.transform.up.y * length * 0.5f);
+                
+                Physics2D.SyncTransforms();
+                bool isTouching = newBoneComponent.GetComponent<Collider2D>().IsTouchingLayers(0);
+
+                if (isTouching)
+                {
+                    bones.Remove(newBoneComponent);
+                    Destroy(newBone);
+                    return;
+                }
+                
+                //Time.timeScale = 0;
+                //set up rigidbody
+                newBone.AddComponent<Rigidbody2D>();
+                newBoneComponent.Rigidbody2D = newBone.GetComponent<Rigidbody2D>();
+                newBoneComponent.Rigidbody2D.gravityScale = 0;
+                newBoneComponent.Rigidbody2D.drag = 0.05f;
+                newBoneComponent.Rigidbody2D.angularDrag = 0.5f;
+
+                joints[i].AddComponent<HingeJoint2D>().connectedBody = newBoneComponent.GetComponent<Rigidbody2D>();
+
+                var newJoint = Instantiate(jointPrefab);
+                
+                var newJointComponent = newJoint.GetComponent<Joint>();
+                newJoint.transform.parent = this.transform;
+                newJointComponent.entity = this;
+                newJointComponent.jointId = jointId;
+                jointId++;
+                
+                joints.Add(newJointComponent);
+
+                newJointComponent.transform.position = new Vector3(
+                    newBoneComponent.transform.position.x + newBoneComponent.transform.up.x * length * 0.5f,
+                    newBoneComponent.transform.position.y + newBoneComponent.transform.up.y * length * 0.5f);
+
+                newJointComponent.AddComponent<HingeJoint2D>().connectedBody =
+                    newBoneComponent.GetComponent<Rigidbody2D>();
+
+                newBoneComponent.firstJoint = joints[i];
+                newBoneComponent.secondJoint = newJointComponent;
+
+                var closestBone = bones[0];
+                var distance = Vector2.Distance(closestBone.transform.position, newBoneComponent.transform.position);
+
+                for (int j = 1; j < bones.Count - 1; j++)
+                {
+                    var loopDistance = Vector2.Distance(bones[j].transform.position, newBoneComponent.transform.position);
+                    if (loopDistance < distance)
+                    {
+                        distance = loopDistance;
+                        closestBone = bones[j];
+                    }
+                    
+                }
+                
+            var muscleObject = new GameObject("Muscle").AddComponent<LineRenderer>();
+            muscleObject.AddComponent<Muscle>();
+            muscleObject.transform.parent = this.transform;
+            var muscleComponent = muscleObject.GetComponent<Muscle>();
+            var lineRenderer = muscleObject.GetComponent<LineRenderer>();
+            muscleComponent.LineRenderer = muscleObject.GetComponent<LineRenderer>();
+            muscleComponent.entity = this;
+            muscleComponent.muscleId = muscleId;
+            muscleId++;
+            
+            muscleComponent.firstBone = newBoneComponent;
+            muscleComponent.secondBone = closestBone;
+            
+            // set up the line renderer
+            lineRenderer.SetPosition(0, newBoneComponent.transform.position);
+            lineRenderer.SetPosition(1, closestBone.transform.position);
+            lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+            lineRenderer.startWidth = 0.15f;
+            lineRenderer.endWidth = 0.15f;
+            // lineRenderer.AddComponent<Rigidbody2D>();
+            // lineRenderer.GetComponent<Rigidbody2D>().drag = 0.5f;
+            // lineRenderer.GetComponent<Rigidbody2D>().gravityScale = 0;
+            
+            lineRenderer.transform.position = (newBoneComponent.transform.position + closestBone.transform.position) / 2;
+            
+            //set up the spring
+            newBoneComponent.AddComponent<SpringJoint2D>();
+            var boneSpringJoint = newBoneComponent.GetComponent<SpringJoint2D>();
+            boneSpringJoint.autoConfigureDistance = false;
+            boneSpringJoint.autoConfigureConnectedAnchor = false;
+            boneSpringJoint.connectedBody = closestBone.GetComponent<Rigidbody2D>();
+            boneSpringJoint.distance = Vector2.Distance(newBoneComponent.transform.position, closestBone.transform.position);
+            boneSpringJoint.enableCollision = true;
+            boneSpringJoint.frequency = 0.75f;
+            boneSpringJoint.dampingRatio = 0.6f;
+            muscleComponent.force = 10000;
+            muscleComponent.timeScale = 3;
+            muscles.Add(muscleObject.GetComponent<Muscle>());
+
+            }
         }
     }
 
@@ -454,14 +594,13 @@ public class Entity : MonoBehaviour
             var boneSpringJoint = bone.GetComponent<SpringJoint2D>();
             boneSpringJoint.autoConfigureDistance = false;
             boneSpringJoint.autoConfigureConnectedAnchor = false;
-            muscleComponent.timeScale = 3;
             boneSpringJoint.connectedBody = otherBone.GetComponent<Rigidbody2D>();
             boneSpringJoint.distance = Vector2.Distance(bone.transform.position, otherBone.transform.position);
             boneSpringJoint.enableCollision = true;
             boneSpringJoint.frequency = 0.75f;
             boneSpringJoint.dampingRatio = 0.6f;
-            muscleComponent.force = 10000;
-            muscleComponent.timeScale = 3f;
+            muscleComponent.force = muscle.GetComponent<Muscle>().force;
+            muscleComponent.timeScale = muscle.GetComponent<Muscle>().timeScale;
             muscles.Add(muscleObject.GetComponent<Muscle>());
             
         }
@@ -509,8 +648,8 @@ public class Entity : MonoBehaviour
                 }
             }
         }
-        
     }
+    
 
     public bool CheckIfDead()
     {
@@ -544,12 +683,23 @@ public class Entity : MonoBehaviour
         childEnergyCost += joints.Count * joints[0].energy;
         return childEnergyCost;
     }
+
+    public void StartExcel()
+    {
+        string filePath = @"C:\Users\natha\OneDrive\Documents\evofluid-data";
+        
+        StreamWriter writer = new StreamWriter(filePath);
+        
+        
+        
+    }
     
     // Start is called before the first frame update
     void Start()
     {
         
     }
+    
     void Update()
     {
         CheckIfDead();
@@ -558,7 +708,7 @@ public class Entity : MonoBehaviour
             UpdateLinePoints(muscle);
         }
        
-        DrawRect(bottomLeftDebug, topRightDebug);
+        //DrawRect(bottomLeftDebug, topRightDebug);
 
         // if (entityId == 1)
         // {

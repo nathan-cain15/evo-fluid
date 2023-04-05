@@ -292,6 +292,40 @@ public class GameController : MonoBehaviour
             }
         }
     }
+
+    void CalculateAverages()
+    {
+        var averageBoneLength = 0f;
+        var averageMuscleForce = 0f;
+        var averageTimeScale = 0f;
+        var numOfBones = 0;
+        var numOfMuscles = 0;
+
+        foreach (var entity in entities)
+        {
+            foreach (var bone in entity.bones)
+            {
+                numOfBones++;
+                averageBoneLength += bone.length;
+            }
+
+            foreach (var muscle in entity.muscles)
+            {
+                numOfMuscles++;
+
+                averageMuscleForce += muscle.force;
+                averageTimeScale += muscle.timeScale;
+            }
+        }
+
+        averageBoneLength /= numOfBones;
+        averageMuscleForce /= numOfMuscles;
+        averageTimeScale /= numOfMuscles;
+        
+        Debug.Log(averageBoneLength);
+        Debug.Log(averageMuscleForce);
+        Debug.Log(averageTimeScale);
+    }
     
     void Start()
     {
@@ -304,7 +338,7 @@ public class GameController : MonoBehaviour
         StarterEntity(point);
         CreateBarrier(bottomLeft, topRight);
         SpawnStartingEntities(5);
-        spawnStartingFood(5000);
+        spawnStartingFood(3000);
     }
     
     // Update is called once per frame
@@ -323,7 +357,7 @@ public class GameController : MonoBehaviour
         CheckEntitiesToReproduce();
         CheckIfAnyEntityIsWaitingToReproduce();
         //TestReproduction(Time.time);
-        spawnFood(Time.time, 1, 30);
+        spawnFood(Time.time, 1, 10);
         
         // debug
         foreach (var entity in entities)
@@ -335,6 +369,12 @@ public class GameController : MonoBehaviour
                     //Debug.DrawLine(new Vector3(0, 0,0), muscle.transform.position);
                 }
             }
+        }
+        //CalculateAverages();
+
+        if (entities.Count == 0)
+        {
+            Time.timeScale = 0;
         }
 
         // if (Decimal.Round((decimal)Time.time, 2) % Decimal.Round(2.981111M, 2) == 0)
