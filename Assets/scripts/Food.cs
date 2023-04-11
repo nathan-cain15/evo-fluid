@@ -7,10 +7,11 @@ using UnityEngine;
 public class Food : MonoBehaviour
 {
     public int energy = 20000;
+    public GameController GameController;
 
     public void OnTriggerEnter2D(Collider2D other)
     {
-        //Debug.Log("test");
+        
         if (other.GetComponent<Joint>() != null)
         {
             other.GetComponent<Joint>().entity.energyToReproduce += energy;
@@ -19,6 +20,7 @@ public class Food : MonoBehaviour
         {
             other.GetComponent<Bone>().entity.energyToReproduce += energy;
         }
+        GameController.numOfFood--;
         Destroy(gameObject);
     }
 

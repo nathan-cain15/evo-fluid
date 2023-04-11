@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using JetBrains.Annotations;
 using Unity.Mathematics;
 using Unity.VisualScripting;
@@ -36,11 +35,14 @@ public class Entity : MonoBehaviour
     public int muscleId = 0;
     public int CostToCreate;
     public int reproductionAngle;
-
+    
     public Vector2 bottomLeftDebug;
     public Vector2 topRightDebug;
-    
 
+    public Vector2 latestPosition;
+    public Vector2 secondLatestPosition;
+
+    public GameController GameController;
 
     public Entity()
     {
@@ -269,7 +271,8 @@ public class Entity : MonoBehaviour
         bone.secondJoint = joint.GetComponent<Joint>();
         joint.GetComponent<Joint>().jointId = jointId + 1;
         jointId++;
-        
+
+        joint.GetComponent<Joint>().originalPosition = joint.transform.position;
         joints.Add(joint.GetComponent<Joint>());
     }
 
@@ -335,13 +338,16 @@ public class Entity : MonoBehaviour
             child.transform.position = pos.Value;
             childEntityScript.bonePrefab = bonePrefab;
             childEntityScript.jointPrefab = jointPrefab;
-            childEntityScript.CreateAndMutateJoints(0.9f, 0.25f);
+            childEntityScript.GameController = GameController;
+            childEntityScript.entityId = GameController.entityId;
+            childEntityScript.GameController.entityId++;
+            childEntityScript.CreateAndMutateJoints(0.7f, 0.05f);
             childEntityScript.transform.Rotate(new Vector3(0, 0, reproductionAngle));
             childEntityScript.ConnectBones();
-            childEntityScript.CreateNewBoneMutations(0.90f, 3);
+            //childEntityScript.CreateNewBoneMutations(0.80f, 3);
             childEntityScript.ConnectMuscles();
-            childEntityScript.MutateMuscleForce(0.9f, 50);
-            childEntityScript.MutateMuscleTimeScale(0.9f, 0.06f);
+            childEntityScript.MutateMuscleForce(0.7f, 25);
+            childEntityScript.MutateMuscleTimeScale(0.7f, 0.02f);
             childEntityScript.CostToCreate = childEntityScript.CalculateCost();
             childEntityScript.energyReserve = energyReserveGivenToChildren;
             
@@ -360,11 +366,12 @@ public class Entity : MonoBehaviour
             var newJoint = Instantiate(jointPrefab);
             var newJointComponent = newJoint.GetComponent<Joint>();
             newJoint.transform.parent = this.transform;
-            newJoint.transform.position = this.transform.position + joint.transform.position - parent.joints[0].transform.position;
+            newJoint.transform.position = this.transform.position + joint.originalPosition - parent.joints[0].originalPosition;
             newJointComponent.parentJoint = joint;
             newJointComponent.entity = this;
             newJointComponent.jointId = jointId;
             jointId++;
+            newJointComponent.originalPosition = newJointComponent.transform.position;
             
             var willChangePercentage = UnityEngine.Random.Range(0f, 1f);
 
@@ -649,7 +656,7 @@ public class Entity : MonoBehaviour
             }
         }
     }
-    
+
 
     public bool CheckIfDead()
     {
@@ -683,16 +690,7 @@ public class Entity : MonoBehaviour
         childEnergyCost += joints.Count * joints[0].energy;
         return childEnergyCost;
     }
-
-    public void StartExcel()
-    {
-        string filePath = @"C:\Users\natha\OneDrive\Documents\evofluid-data";
-        
-        StreamWriter writer = new StreamWriter(filePath);
-        
-        
-        
-    }
+    
     
     // Start is called before the first frame update
     void Start()
@@ -700,12 +698,18 @@ public class Entity : MonoBehaviour
         
     }
     
-    void Update()
+    void FixedUpdate()
     {
         CheckIfDead();
         foreach (var muscle in muscles)
         {
             UpdateLinePoints(muscle);
+        }
+
+        if (Time.time != 0 & Time.time % 5 == 0)
+        {
+            secondLatestPosition = latestPosition;
+            latestPosition = joints[0].transform.position;
         }
        
         //DrawRect(bottomLeftDebug, topRightDebug);
