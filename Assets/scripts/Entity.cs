@@ -341,13 +341,14 @@ public class Entity : MonoBehaviour
             childEntityScript.GameController = GameController;
             childEntityScript.entityId = GameController.entityId;
             childEntityScript.GameController.entityId++;
-            childEntityScript.CreateAndMutateJoints(0.7f, 0.05f);
+            childEntityScript.CreateAndMutateJoints(0.9f, 0.25f);
             childEntityScript.transform.Rotate(new Vector3(0, 0, reproductionAngle));
             childEntityScript.ConnectBones();
-            //childEntityScript.CreateNewBoneMutations(0.80f, 3);
+            childEntityScript.CreateNewBoneMutations(0.99f, 2);
             childEntityScript.ConnectMuscles();
-            childEntityScript.MutateMuscleForce(0.7f, 25);
-            childEntityScript.MutateMuscleTimeScale(0.7f, 0.02f);
+            childEntityScript.MutateMuscleForce(0.9f, 50);
+            childEntityScript.MutateMuscleTimeScale(0.9f, 0.6f);
+            childEntityScript.DeleteSmallBones();
             childEntityScript.CostToCreate = childEntityScript.CalculateCost();
             childEntityScript.energyReserve = energyReserveGivenToChildren;
             
@@ -371,7 +372,7 @@ public class Entity : MonoBehaviour
             newJointComponent.entity = this;
             newJointComponent.jointId = jointId;
             jointId++;
-            newJointComponent.originalPosition = newJointComponent.transform.position;
+            
             
             var willChangePercentage = UnityEngine.Random.Range(0f, 1f);
 
@@ -384,7 +385,7 @@ public class Entity : MonoBehaviour
             
             newJoint.transform.position =
                 new Vector2(newJoint.transform.position.x + transformChange.x, newJoint.transform.position.y + transformChange.y);
-            
+            newJointComponent.originalPosition = newJoint.transform.position;
             joints.Add(newJointComponent);
         }
 
@@ -460,8 +461,9 @@ public class Entity : MonoBehaviour
                 var jointPosition = joints[i].transform.position;
 
                 newBoneComponent.transform.localScale = new Vector3(0.25f, length, 0);
+                newBoneComponent.length = length;
                 var randAngle = UnityEngine.Random.Range(1, 361);
-                Debug.Log(randAngle);
+              
                 newBoneComponent.transform.Rotate(new Vector3(0, 0, randAngle));
 
                 newBoneComponent.transform.position = new Vector3(jointPosition.x + newBoneComponent.transform.up.x * length * 0.5f, jointPosition.y + newBoneComponent.transform.up.y * length * 0.5f);
@@ -502,6 +504,7 @@ public class Entity : MonoBehaviour
 
                 newJointComponent.AddComponent<HingeJoint2D>().connectedBody =
                     newBoneComponent.GetComponent<Rigidbody2D>();
+                newJointComponent.originalPosition = newJoint.transform.position;
 
                 newBoneComponent.firstJoint = joints[i];
                 newBoneComponent.secondJoint = newJointComponent;
@@ -657,6 +660,60 @@ public class Entity : MonoBehaviour
         }
     }
 
+    public void DeleteSmallBones()
+    {
+        for (int i = 0; i < bones.Count; i++)
+        {
+            if (bones[i].length < 1)
+            {
+                for (int j = 0; j < muscles.Count; j++)
+                {
+                    if (muscles[j].firstBone == bones[i] | muscles[j].secondBone == bones[i])
+                    {
+                        var muscle = muscles[j];
+                        muscles.Remove(muscles[j]);
+                        Destroy(muscle.gameObject);
+                    }
+                }
+
+               //need to check for connections if there are floating joints with no connections
+               var joint1OtherConnection = false;
+               var joint2OtherConnection = false;
+                
+               for (int j = 0; j < bones.Count; j++)
+               {
+                   if (bones[j] != bones[i] && (bones[i].firstJoint == bones[j].firstJoint | bones[i].firstJoint == bones[j].secondJoint))
+                   {
+                       joint1OtherConnection = true;
+                   }
+
+                   if (bones[j] != bones[i] && (bones[i].secondJoint == bones[j].firstJoint |
+                                                bones[i].firstJoint == bones[j].secondJoint))
+                   {
+                       joint2OtherConnection = true;
+                   }
+               }
+
+               if (!joint1OtherConnection)
+               {
+                   var joint = bones[i].firstJoint;
+                   joints.Remove(joint);
+                   Destroy(joint.gameObject);
+               }
+
+               if (!joint2OtherConnection)
+               {
+                   var joint = bones[i].secondJoint;
+                   joints.Remove(joint);
+                   Destroy(joint.gameObject);
+               }
+
+                var bone = bones[i];
+                bones.Remove(bone);
+                Destroy(bone.gameObject);
+            }
+        }
+    }
 
     public bool CheckIfDead()
     {
@@ -667,7 +724,7 @@ public class Entity : MonoBehaviour
 
         return false;
     }
-
+    
     public bool CheckIfCanReproduce()
     {
         if (CostToCreate <= energyToReproduce)

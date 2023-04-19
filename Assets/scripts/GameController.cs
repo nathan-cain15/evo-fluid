@@ -396,6 +396,7 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
+        
         var point = new Vector3(0, 5, 0);
         var otherPoint = new Vector3(10, 0, 0);
         var varBottomLeft = new Vector2(-200, -200);
